@@ -34,15 +34,15 @@
 
 ##----[ PARAMETERS ]----------------------------------------------------------##
 
-NUM="0123456789"                       # String of numercial characters
-SCHAR="@#%&*+-=$"                      # String of special characters
-ALPHA_LOW="abcdefghijklmnopqrstuvwxyz" # String of lower case characters
-MIN_CHAR=8                             # Minimum number of characters in pass.
-MAX_CHAR=16                            # Maximum number of characters in pass.
-MIN_MAX_LOW=(1 -)                      # Array containing min max for lower char
-MIN_MAX_UP=(1 -)                       # Array containing min max for upper char
-MIN_MAX_NUM=(1 -)                      # Array containing min max for num. char
-MIN_MAX_SCHAR=(1 1)                    # Array containing min max for spec. char
+readonly NUM="0123456789"                       # String of numercial char.
+readonly SCHAR="@#%&*+-=$"                      # String of special char.
+readonly ALPHA_LOW="abcdefghijklmnopqrstuvwxyz" # String of lower case char.
+readonly MIN_CHAR=8                             # Min number of char in pass.
+readonly MAX_CHAR=16                            # Maxnumber of char/ in pass.
+readonly MIN_MAX_LOW=(1 -)           # Array containing min max for lower char.
+readonly MIN_MAX_UP=(1 -)            # Array containing min max for upper char.
+readonly MIN_MAX_NUM=(1 -)           # Array containing min max for num. char.
+readonly MIN_MAX_SCHAR=(1 1)         # Array containing min max for spec. char.
 
 
 ##----[ GLOBAL VARIABLES ]----------------------------------------------------##

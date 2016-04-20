@@ -59,31 +59,56 @@ PASSWORD=""                            # Initialize password content
 ##----[ FUNCTIONS ]-----------------------------------------------------------##
 
     ############################################################################
+    # Print usage.                                                             #
+    # Args:                                                                    #
+    #        None                                                              #
+    function usage()
+    {
+        echo "Usage: $(basename "$0") [OPTION]"
+        echo "  -n <num>    Number of characters (min:$MIN_CHAR, max:$MAX_CHAR)"
+        echo "  -h          Display help"
+    }
+
+    ############################################################################
     # Check input and get password length.                                     #
     # Args:                                                                    #
     #        All arguments provided.                                           #
     function check_arguments()
     {
-        # Check firt argument, ignore other arguments
-        if [ ! -z "$1" ]; then
-            local regex='^[0-9]+$'
-            if [[ $1 =~ $regex ]] ; then
-                if [ $1 -lt $MIN_CHAR ]; then
-                    LENGTH=$MIN_CHAR
-                	echo "warning: min password size is set to $MIN_CHAR." >&2
-                elif [ $1 -le $MAX_CHAR ]; then
-                    LENGTH=$1
-                else
-                	echo "warning: max password size is set to $MAX_CHAR." >&2
-                fi
-            else
-                echo "error: input argument not a number." >&2; exit 1
-            fi
-        fi
+        # Desactivate error handling by getops
+		OPTERR=0
+
+        # Parse arguments
+		while getopts hn: OPT; do
+		    case "$OPT" in
+        		h)
+					usage; exit 0
+        	    	;;
+        		n)
+		            local regex='^[0-9]+$'
+
+        		    if [[ $OPTARG =~ $regex ]]; then
+                		if [ $OPTARG -lt $MIN_CHAR ]; then
+                    		LENGTH=$MIN_CHAR
+                			echo "warning: min password size is $MIN_CHAR" >&2
+                		elif [ $OPTARG -le $MAX_CHAR ]; then
+                    		LENGTH=$OPTARG
+                		else
+                			echo "warning: max password size is $MAX_CHAR" >&2
+                		fi
+            		else
+                		echo "error: input argument not a number." >&2; exit 1
+            		fi
+        		    ;;
+			    \?)
+				    echo "error: invalid option." >&2;
+                    usage; exit 1
+      				;;
+		    esac
+		done
 
         echo "Generating a $LENGTH characters password:"
     }
-
 
     ############################################################################
     # Compute characters left to add to the password based on min size of each #
@@ -100,7 +125,6 @@ PASSWORD=""                            # Initialize password content
                  "min size of each character type."  >&2; exit 1
         fi
     }
-
 
     ############################################################################
     # Compute total occrences for the given character type.                    #
@@ -132,7 +156,6 @@ PASSWORD=""                            # Initialize password content
         fi
     }
 
-
     ############################################################################
     # Generate sub password for the given character type.                      #
     # Args:                                                                    #
@@ -155,7 +178,6 @@ PASSWORD=""                            # Initialize password content
 
         PASSWORD="$PASSWORD$res"
     }
-
 
     ############################################################################
     # Shuffle characters in the password.                                      #

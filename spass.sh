@@ -28,7 +28,9 @@
 #  A strong password generator.                                                #
 #                                                                              #
 ##----[ ARGUMENTS ]-----------------------------------------------------------##
-#  $1   :   number of characters.                                              #
+#   -n <num>    Number of characters                                           #
+#   -h          Display help                                                   #
+#   -c          Enable colors                                                  #
 ################################################################################
 
 
@@ -43,6 +45,7 @@ readonly MIN_MAX_LOW=(1 -)           # Array containing min max for lower char.
 readonly MIN_MAX_UP=(1 -)            # Array containing min max for upper char.
 readonly MIN_MAX_NUM=(1 -)           # Array containing min max for num. char.
 readonly MIN_MAX_SCHAR=(1 1)         # Array containing min max for spec. char.
+ENABLE_COLORS="false"                # Disable colors by default
 
 
 ##----[ GLOBAL VARIABLES ]----------------------------------------------------##
@@ -56,6 +59,21 @@ NB_SCHAR=${MIN_MAX_SCHAR[0]}           # Initialize min occurences of spec. char
 PASSWORD=""                            # Initialize password content
 
 
+##----[ ERRORS ]--------------------------------------------------------------##
+
+    declare -A ERRORS
+	ERRORS["not_number"]="input argument is not a number."
+	ERRORS["invalid_opt"]="invalid option."
+	ERRORS["too_small"]="size too small to match the sum of each char min size."
+
+
+##----[ WARNINGS ]------------------------------------------------------------##
+
+    declare -A WARNINGS
+	WARNINGS["min_size"]="minimum password size is set to \$MIN_CHAR."
+	WARNINGS["max_size"]="maximum password size is set to \$MAX_CHAR."
+
+
 ##----[ FUNCTIONS ]-----------------------------------------------------------##
 
     ############################################################################
@@ -67,7 +85,50 @@ PASSWORD=""                            # Initialize password content
         echo "Usage: $(basename "$0") [OPTION]"
         echo "  -n <num>    Number of characters (min:$MIN_CHAR, max:$MAX_CHAR)"
         echo "  -h          Display help"
+        echo "  -c          Enable colors"
     }
+
+	############################################################################
+	# Print warning in stderr.                                                 #
+	# Args:                                                                    #
+	#      -$1: Warning code.                                                  #
+	# Result: Print warning.                                                   #
+	function print_warning()
+	{
+		# Extract argument
+		local warning_code="${1}"
+
+		# Get warning description
+		eval "msg=\"${WARNINGS[${warning_code}]}\""
+
+		# Check if colors are enabled
+		if [ ${ENABLE_COLORS} = "true" ]; then
+			echo -e "\033[1;31mwarning:\033[0m \033[31m${msg}\033[0m" 1>&2
+		else
+			echo "warning: ${msg}" 1>&2
+		fi
+	}
+
+	############################################################################
+	# Print error in stderr.                                                 #
+	# Args:                                                                    #
+	#      -$1: Error code.                                                  #
+	# Result: Print error.                                                   #
+	function print_error()
+	{
+		# Extract argument
+		local error_code="${1}"
+
+		# Get error description
+		eval "msg=\"${ERRORS[${error_code}]}\""
+
+		# Check if colors are enabled
+		if [ ${ENABLE_COLORS} = "true" ]; then
+			echo -e "\033[1;31merror:\033[0m \033[31m${msg}\033[0m" 1>&2
+		else
+			echo "error: ${msg}" 1>&2
+		fi
+	}
 
     ############################################################################
     # Check input and get password length.                                     #
@@ -75,39 +136,52 @@ PASSWORD=""                            # Initialize password content
     #        All arguments provided.                                           #
     function check_arguments()
     {
+        # Available options
+        local options="hcn:"
+
         # Desactivate error handling by getops
 		OPTERR=0
 
+        # Look for color option first
+		while getopts $options OPT; do
+		    case "$OPT" in
+        		c)
+                    ENABLE_COLORS="true"
+        	    	;;
+            esac
+        done
+
+        # Reinitialize index
+        OPTIND=1
+
         # Parse arguments
-		while getopts hn: OPT; do
+		while getopts $options OPT; do
 		    case "$OPT" in
         		h)
 					usage; exit 0
         	    	;;
-        		n)
+                n)
 		            local regex='^[0-9]+$'
 
         		    if [[ $OPTARG =~ $regex ]]; then
                 		if [ $OPTARG -lt $MIN_CHAR ]; then
                     		LENGTH=$MIN_CHAR
-                			echo "warning: min password size is $MIN_CHAR" >&2
+							print_warning "min_size"
                 		elif [ $OPTARG -le $MAX_CHAR ]; then
                     		LENGTH=$OPTARG
                 		else
-                			echo "warning: max password size is $MAX_CHAR" >&2
+							print_warning "max_size"
                 		fi
             		else
-                		echo "error: input argument not a number." >&2; exit 1
+					    print_error "not_number"; exit 1
             		fi
         		    ;;
 			    \?)
-				    echo "error: invalid option." >&2;
+					print_error "invalid_opt"
                     usage; exit 1
       				;;
 		    esac
 		done
-
-        echo "Generating a $LENGTH characters password:"
     }
 
     ############################################################################
@@ -121,8 +195,7 @@ PASSWORD=""                            # Initialize password content
 
         # Ensure LEFT is still positive
         if [ $LEFT -lt 0 ]; then
-            echo "error: password length too small to match the sum of the " \
-                 "min size of each character type."  >&2; exit 1
+			print_error "too_small"; exit 1
         fi
     }
 
@@ -196,6 +269,9 @@ check_arguments $*
 
 # Compute characters left to use to generate the password
 compute_left
+
+# Display warnings and errors
+echo "Generating a $LENGTH characters password:"
 
 # Compute size of each portion type
 while [ $LEFT -gt 0 ]; do

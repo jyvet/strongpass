@@ -62,16 +62,16 @@ PASSWORD=""                            # Initialize password content
 ##----[ ERRORS ]--------------------------------------------------------------##
 
     declare -A ERRORS
-	ERRORS["not_number"]="input argument is not a number."
-	ERRORS["invalid_opt"]="invalid option."
-	ERRORS["too_small"]="size too small to match the sum of each char min size."
+    ERRORS["not_number"]="input argument is not a number."
+    ERRORS["invalid_opt"]="invalid option."
+    ERRORS["too_small"]="size too small to match the sum of each char min size."
 
 
 ##----[ WARNINGS ]------------------------------------------------------------##
 
     declare -A WARNINGS
-	WARNINGS["min_size"]="minimum password size is set to \$MIN_CHAR."
-	WARNINGS["max_size"]="maximum password size is set to \$MAX_CHAR."
+    WARNINGS["min_size"]="minimum password size is set to \$MIN_CHAR."
+    WARNINGS["max_size"]="maximum password size is set to \$MAX_CHAR."
 
 
 ##----[ FUNCTIONS ]-----------------------------------------------------------##
@@ -88,47 +88,47 @@ PASSWORD=""                            # Initialize password content
         echo "  -c          Enable colors"
     }
 
-	############################################################################
-	# Print warning in stderr.                                                 #
-	# Args:                                                                    #
-	#      -$1: Warning code.                                                  #
-	# Result: Print warning.                                                   #
-	function print_warning()
-	{
-		# Extract argument
-		local warning_code="${1}"
+    ############################################################################
+    # Print warning in stderr.                                                 #
+    # Args:                                                                    #
+    #      -$1: Warning code.                                                  #
+    # Result: Print warning.                                                   #
+    function print_warning()
+    {
+        # Extract argument
+        local warning_code="${1}"
 
-		# Get warning description
-		eval "msg=\"${WARNINGS[${warning_code}]}\""
+        # Get warning description
+        eval "msg=\"${WARNINGS[${warning_code}]}\""
 
-		# Check if colors are enabled
-		if [ ${ENABLE_COLORS} = "true" ]; then
-			echo -e "\033[1;31mwarning:\033[0m \033[31m${msg}\033[0m" 1>&2
-		else
-			echo "warning: ${msg}" 1>&2
-		fi
-	}
+        # Check if colors are enabled
+        if [ ${ENABLE_COLORS} = "true" ]; then
+            echo -e "\033[1;31mwarning:\033[0m \033[31m${msg}\033[0m" 1>&2
+        else
+            echo "warning: ${msg}" 1>&2
+        fi
+    }
 
-	############################################################################
-	# Print error in stderr.                                                 #
-	# Args:                                                                    #
-	#      -$1: Error code.                                                  #
-	# Result: Print error.                                                   #
-	function print_error()
-	{
-		# Extract argument
-		local error_code="${1}"
+    ############################################################################
+    # Print error in stderr.                                                   #
+    # Args:                                                                    #
+    #      -$1: Error code.                                                    #
+    # Result: Print error.                                                     #
+    function print_error()
+    {
+        # Extract argument
+        local error_code="${1}"
 
-		# Get error description
-		eval "msg=\"${ERRORS[${error_code}]}\""
+        # Get error description
+        eval "msg=\"${ERRORS[${error_code}]}\""
 
-		# Check if colors are enabled
-		if [ ${ENABLE_COLORS} = "true" ]; then
-			echo -e "\033[1;31merror:\033[0m \033[31m${msg}\033[0m" 1>&2
-		else
-			echo "error: ${msg}" 1>&2
-		fi
-	}
+        # Check if colors are enabled
+        if [ ${ENABLE_COLORS} = "true" ]; then
+            echo -e "\033[1;31merror:\033[0m \033[31m${msg}\033[0m" 1>&2
+        else
+            echo "error: ${msg}" 1>&2
+        fi
+    }
 
     ############################################################################
     # Check input and get password length.                                     #
@@ -140,14 +140,14 @@ PASSWORD=""                            # Initialize password content
         local options="hcn:"
 
         # Desactivate error handling by getops
-		OPTERR=0
+        OPTERR=0
 
         # Look for color option first
-		while getopts $options OPT; do
-		    case "$OPT" in
-        		c)
+        while getopts $options OPT; do
+            case "$OPT" in
+                c)
                     ENABLE_COLORS="true"
-        	    	;;
+                    ;;
             esac
         done
 
@@ -155,33 +155,33 @@ PASSWORD=""                            # Initialize password content
         OPTIND=1
 
         # Parse arguments
-		while getopts $options OPT; do
-		    case "$OPT" in
-        		h)
-					usage; exit 0
-        	    	;;
+        while getopts $options OPT; do
+            case "$OPT" in
+                h)
+                    usage; exit 0
+                    ;;
                 n)
-		            local regex='^[0-9]+$'
+                    local regex='^[0-9]+$'
 
-        		    if [[ $OPTARG =~ $regex ]]; then
-                		if [ $OPTARG -lt $MIN_CHAR ]; then
-                    		LENGTH=$MIN_CHAR
-							print_warning "min_size"
-                		elif [ $OPTARG -le $MAX_CHAR ]; then
-                    		LENGTH=$OPTARG
-                		else
-							print_warning "max_size"
-                		fi
-            		else
-					    print_error "not_number"; exit 1
-            		fi
-        		    ;;
-			    \?)
-					print_error "invalid_opt"
+                    if [[ $OPTARG =~ $regex ]]; then
+                        if [ $OPTARG -lt $MIN_CHAR ]; then
+                            LENGTH=$MIN_CHAR
+                            print_warning "min_size"
+                        elif [ $OPTARG -le $MAX_CHAR ]; then
+                            LENGTH=$OPTARG
+                        else
+                            print_warning "max_size"
+                        fi
+                    else
+                        print_error "not_number"; exit 1
+                    fi
+                    ;;
+                \?)
+                    print_error "invalid_opt"
                     usage; exit 1
-      				;;
-		    esac
-		done
+                    ;;
+            esac
+        done
     }
 
     ############################################################################

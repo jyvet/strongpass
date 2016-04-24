@@ -40,7 +40,7 @@ readonly NUM="0123456789"                       # String of numercial char.
 readonly SCHAR="@#%&*+-=$"                      # String of special char.
 readonly ALPHA_LOW="abcdefghijklmnopqrstuvwxyz" # String of lower case char.
 readonly MIN_CHAR=8                             # Min number of char in pass.
-readonly MAX_CHAR=16                            # Maxnumber of char/ in pass.
+readonly MAX_CHAR=16                            # Max number of char in pass.
 readonly MIN_MAX_LOW=(1 -)           # Array containing min max for lower char.
 readonly MIN_MAX_UP=(1 -)            # Array containing min max for upper char.
 readonly MIN_MAX_NUM=(1 -)           # Array containing min max for num. char.
@@ -61,17 +61,21 @@ PASSWORD=""                            # Initialize password content
 
 ##----[ ERRORS ]--------------------------------------------------------------##
 
-    declare -A ERRORS
-    ERRORS["not_number"]="input argument is not a number."
-    ERRORS["invalid_opt"]="invalid option."
-    ERRORS["too_small"]="size too small to match the sum of each char min size."
+readonly ENOTNUM=1
+readonly EINVOPT=2
+readonly E2SMALL=3
+readonly EINVNUM=4
+ERRORS[$ENOTNUM]="input argument is not a number."
+ERRORS[$EINVOPT]="invalid option."
+ERRORS[$E2SMALL]="size too small to match the sum of each char min size."
+ERRORS[$EINVNUM]="invalid number of arguments."
 
 
 ##----[ WARNINGS ]------------------------------------------------------------##
 
-    declare -A WARNINGS
-    WARNINGS["min_size"]="minimum password size is set to \$MIN_CHAR."
-    WARNINGS["max_size"]="maximum password size is set to \$MAX_CHAR."
+declare -A WARNINGS
+WARNINGS["min_size"]="minimum password size is set to \$MIN_CHAR."
+WARNINGS["max_size"]="maximum password size is set to \$MAX_CHAR."
 
 
 ##----[ FUNCTIONS ]-----------------------------------------------------------##
@@ -79,8 +83,8 @@ PASSWORD=""                            # Initialize password content
     ############################################################################
     # Print usage.                                                             #
     # Args:                                                                    #
-    #        None                                                              #
-    function usage()
+    #       None                                                               #
+    usage()
     {
         echo "Usage: $(basename "$0") [OPTION]"
         echo "  -n <num>    Number of characters (min:$MIN_CHAR, max:$MAX_CHAR)"
@@ -93,7 +97,7 @@ PASSWORD=""                            # Initialize password content
     # Args:                                                                    #
     #      -$1: Warning code.                                                  #
     # Result: Print warning.                                                   #
-    function print_warning()
+    print_warning()
     {
         # Extract argument
         local warning_code="${1}"
@@ -114,7 +118,7 @@ PASSWORD=""                            # Initialize password content
     # Args:                                                                    #
     #      -$1: Error code.                                                    #
     # Result: Print error.                                                     #
-    function print_error()
+    print_error()
     {
         # Extract argument
         local error_code="${1}"
@@ -128,13 +132,15 @@ PASSWORD=""                            # Initialize password content
         else
             echo "error: ${msg}" 1>&2
         fi
+
+        return $error_code
     }
 
     ############################################################################
     # Check input and get password length.                                     #
     # Args:                                                                    #
-    #        All arguments provided.                                           #
-    function check_arguments()
+    #       All arguments provided.                                            #
+    check_arguments()
     {
         # Available options
         local options="hcn:"
@@ -170,15 +176,15 @@ PASSWORD=""                            # Initialize password content
                         elif [ $OPTARG -le $MAX_CHAR ]; then
                             LENGTH=$OPTARG
                         else
+                            LENGTH=$MAX_CHAR
                             print_warning "max_size"
                         fi
                     else
-                        print_error "not_number"; exit 1
+                        print_error $ENOTNUM; return $?
                     fi
                     ;;
                 \?)
-                    print_error "invalid_opt"
-                    usage; exit 1
+                    print_error $EINVOPT; usage; return $EINVOPT
                     ;;
             esac
         done
@@ -188,23 +194,29 @@ PASSWORD=""                            # Initialize password content
     # Compute characters left to add to the password based on min size of each #
     # character type.                                                          #
     # Args:                                                                    #
-    #        None                                                              #
-    function compute_left()
+    #       None                                                               #
+    compute_left()
     {
         LEFT=$(( $LENGTH - $NB_LOW - $NB_UP - $NB_NUM - $NB_SCHAR ))
 
         # Ensure LEFT is still positive
         if [ $LEFT -lt 0 ]; then
-			print_error "too_small"; exit 1
+			print_error $E2SMALL; return $?
         fi
     }
 
     ############################################################################
     # Compute total occrences for the given character type.                    #
     # Args:                                                                    #
-    #        $1 : in/out variable to retrieve/store occurence count            #
-    function compute_occurence()
+    #       -$1: in/out variable to retrieve/store occurence count.            #
+    #       -$2: maximum occurences for the given type.                        #
+    compute_occurences()
     {
+        # Check number of input arguments
+        if [ "$#" -ne 2 ]; then
+            print_error $EINVNUM; return $?
+        fi
+
         # Extract parameters
         local inoutvar="$1"
         local max="$2"
@@ -232,10 +244,15 @@ PASSWORD=""                            # Initialize password content
     ############################################################################
     # Generate sub password for the given character type.                      #
     # Args:                                                                    #
-    #        $1 : character type                                               #
-    #        $2 : sub password size                                            #
-    function sub_pass()
+    #       -$1: character type.                                               #
+    #       -$2: sub password size.                                            #
+    sub_pass()
     {
+        # Check number of input arguments
+        if [ "$#" -ne 2 ]; then
+            print_error $EINVNUM; return $?
+        fi
+
         # Extract parameters
         local string_char="$1"
         local size="$2"
@@ -255,8 +272,8 @@ PASSWORD=""                            # Initialize password content
     ############################################################################
     # Shuffle characters in the password.                                      #
     # Args:                                                                    #
-    #        None                                                              #
-    function shuffle_pass()
+    #       None                                                               #
+    shuffle_pass()
     {
         PASSWORD=`echo "$PASSWORD" | fold -w1 | shuf | tr -d '\n'`
     }
@@ -264,30 +281,33 @@ PASSWORD=""                            # Initialize password content
 
 ##----[ MAIN ]----------------------------------------------------------------##
 
-# Retrive and check all provided arguments
-check_arguments $*
+if [ -z "$SPASS_ENABLE_TESTS" ]; then  # Disable main if unit testing
+    # Retrive and check all provided arguments
+    check_arguments $* || exit $?
 
-# Compute characters left to use to generate the password
-compute_left
+    # Compute characters left to use to generate the password
+    compute_left || exit $?
 
-# Display warnings and errors
-echo "Generating a $LENGTH characters password:"
+    # Display warnings and errors
+    echo "Generating a $LENGTH characters password:"
 
-# Compute size of each portion type
-while [ $LEFT -gt 0 ]; do
-    compute_occurence "NB_LOW"   ${MIN_MAX_LOW[1]}
-    compute_occurence "NB_UP"    ${MIN_MAX_UP[1]}
-    compute_occurence "NB_NUM"   ${MIN_MAX_NUM[1]}
-    compute_occurence "NB_SCHAR" ${MIN_MAX_SCHAR[1]}
-done
+    # Compute size of each portion type
+    while [ $LEFT -gt 0 ]; do
+        compute_occurences "NB_LOW"   ${MIN_MAX_LOW[1]}    || exit $?
+        compute_occurences "NB_UP"    ${MIN_MAX_UP[1]}     || exit $?
+        compute_occurences "NB_NUM"   ${MIN_MAX_NUM[1]}    || exit $?
+        compute_occurences "NB_SCHAR" ${MIN_MAX_SCHAR[1]}  || exit $?
+    done
 
-# Generate sub parts of the password
-sub_pass "$ALPHA_LOW" "$NB_LOW"
-sub_pass "$NUM"       "$NB_NUM"
-sub_pass "$ALPHA_UP"  "$NB_UP"
-sub_pass "$SCHAR"     "$NB_SCHAR"
+    # Generate sub parts of the password
+    sub_pass "$ALPHA_LOW" "$NB_LOW"    || exit $?
+    sub_pass "$NUM"       "$NB_NUM"    || exit $?
+    sub_pass "$ALPHA_UP"  "$NB_UP"     || exit $?
+    sub_pass "$SCHAR"     "$NB_SCHAR"  || exit $?
 
-# Shuffle all characters and output the password
-shuffle_pass
+    # Shuffle all characters and output the password
+    shuffle_pass
 
-echo $PASSWORD
+    # Output generated password
+    echo $PASSWORD
+fi

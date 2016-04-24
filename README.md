@@ -21,3 +21,9 @@ Example
     5C1Ml#OqFMVm3b
 
 
+Running unit tests
+------------------
+
+    wget -O - "http://downloads.sourceforge.net/shunit2/shunit2-2.0.3.tgz" | tar zx
+    bash tests/test_strongpass.sh
+
